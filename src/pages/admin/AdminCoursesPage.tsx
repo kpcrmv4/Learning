@@ -10,12 +10,73 @@ import { Badge } from '@/components/ui/Badge'
 import { formatPrice } from '@/lib/format'
 import { slugify } from '@/lib/format'
 import { COURSE_CATEGORIES, DIFFICULTY_LEVELS } from '@/config/constants'
+import { FileUpload } from '@/components/ui/FileUpload'
 import {
   Plus, Pencil, Trash2, Eye, EyeOff, BookOpen,
   GripVertical, Video, FileQuestion
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Course, Lesson, Quiz, QuizQuestion } from '@/types/database'
+
+function LessonForm({
+  courseId,
+  lesson,
+  onSubmit,
+  onCancel,
+}: {
+  courseId: string
+  lesson?: Lesson
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  onCancel: () => void
+}) {
+  const [videoPath, setVideoPath] = useState(lesson?.video_storage_path || '')
+  const courseSlug = courseId.substring(0, 8)
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <Input label="ชื่อบทเรียน" name="title" defaultValue={lesson?.title || ''} required />
+      <Textarea label="คำอธิบาย" name="description" defaultValue={lesson?.description || ''} />
+
+      {/* Video Upload */}
+      <div>
+        <FileUpload
+          bucket="videos"
+          folder={`courses/${courseSlug}`}
+          accept="video/mp4,video/webm,video/quicktime,video/*"
+          currentPath={videoPath}
+          label="อัปโหลดวิดีโอ"
+          icon="video"
+          maxSizeMB={500}
+          onUploaded={(path) => setVideoPath(path)}
+          onRemoved={() => setVideoPath('')}
+        />
+        {/* Hidden input to carry the value in FormData */}
+        <input type="hidden" name="video_storage_path" value={videoPath} />
+        {!videoPath && (
+          <Input
+            className="mt-2"
+            value={videoPath}
+            onChange={e => setVideoPath(e.target.value)}
+            placeholder="หรือพิมพ์ Storage Path เช่น courses/xxx/lesson-1.mp4"
+          />
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Input label="ระยะเวลา (นาที)" name="duration_minutes" type="number" defaultValue={lesson?.duration_minutes ?? ''} />
+        <Input label="ลำดับ" name="sort_order" type="number" defaultValue={lesson?.sort_order ?? 0} />
+      </div>
+      <label className="flex items-center gap-2">
+        <input type="checkbox" name="is_preview" defaultChecked={lesson?.is_preview} className="rounded" />
+        <span className="text-sm text-gray-700">ดูตัวอย่างฟรี</span>
+      </label>
+      <div className="flex justify-end gap-3 pt-4">
+        <Button variant="outline" type="button" onClick={onCancel}>ยกเลิก</Button>
+        <Button type="submit">บันทึก</Button>
+      </div>
+    </form>
+  )
+}
 
 export function AdminCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
@@ -332,7 +393,42 @@ export function AdminCoursesPage() {
               <Select label="หมวดหมู่" options={COURSE_CATEGORIES.map(c => ({ value: c.value, label: c.label }))} value={editCourse.category || ''} onChange={e => setEditCourse(prev => ({ ...prev!, category: e.target.value }))} placeholder="เลือกหมวดหมู่" />
               <Select label="ระดับ" options={DIFFICULTY_LEVELS.map(d => ({ value: d.value, label: d.label }))} value={editCourse.difficulty || ''} onChange={e => setEditCourse(prev => ({ ...prev!, difficulty: e.target.value as Course['difficulty'] }))} placeholder="เลือกระดับ" />
             </div>
-            <Input label="URL รูปปก" value={editCourse.thumbnail_url || ''} onChange={e => setEditCourse(prev => ({ ...prev!, thumbnail_url: e.target.value }))} />
+            {/* Thumbnail upload */}
+            <div>
+              <FileUpload
+                bucket="thumbnails"
+                folder={`courses/${editCourse.slug || 'new'}`}
+                accept="image/*"
+                currentPath=""
+                label="อัปโหลดรูปปก"
+                icon="image"
+                maxSizeMB={10}
+                onUploaded={(_path, publicUrl) => {
+                  if (publicUrl) setEditCourse(prev => ({ ...prev!, thumbnail_url: publicUrl }))
+                }}
+                onRemoved={() => setEditCourse(prev => ({ ...prev!, thumbnail_url: null }))}
+              />
+              {editCourse.thumbnail_url && (
+                <div className="mt-2 flex items-center gap-3">
+                  <img src={editCourse.thumbnail_url} alt="Preview" className="h-16 w-24 object-cover rounded-lg border border-gray-200" />
+                  <Input
+                    label=""
+                    value={editCourse.thumbnail_url}
+                    onChange={e => setEditCourse(prev => ({ ...prev!, thumbnail_url: e.target.value }))}
+                    placeholder="หรือวาง URL โดยตรง"
+                    className="flex-1"
+                  />
+                </div>
+              )}
+              {!editCourse.thumbnail_url && (
+                <Input
+                  className="mt-2"
+                  value=""
+                  onChange={e => setEditCourse(prev => ({ ...prev!, thumbnail_url: e.target.value }))}
+                  placeholder="หรือวาง URL รูปปกโดยตรง"
+                />
+              )}
+            </div>
             <Input label="ระยะเวลารวม (นาที)" type="number" value={editCourse.total_duration_minutes ?? ''} onChange={e => setEditCourse(prev => ({ ...prev!, total_duration_minutes: Number(e.target.value) || null }))} />
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={editCourse.is_published ?? false} onChange={e => setEditCourse(prev => ({ ...prev!, is_published: e.target.checked }))} className="rounded" />
@@ -347,25 +443,15 @@ export function AdminCoursesPage() {
       </Modal>
 
       {/* Lesson Modal */}
-      <Modal open={!!lessonModal} onClose={() => setLessonModal(null)} title={lessonModal?.lesson ? 'แก้ไขบทเรียน' : 'เพิ่มบทเรียน'}>
+      <Modal open={!!lessonModal} onClose={() => setLessonModal(null)} title={lessonModal?.lesson ? 'แก้ไขบทเรียน' : 'เพิ่มบทเรียน'} size="lg">
         {lessonModal && (
-          <form onSubmit={handleSaveLesson} className="space-y-4">
-            <Input label="ชื่อบทเรียน" name="title" defaultValue={lessonModal.lesson?.title || ''} required />
-            <Textarea label="คำอธิบาย" name="description" defaultValue={lessonModal.lesson?.description || ''} />
-            <Input label="Video Storage Path" name="video_storage_path" defaultValue={lessonModal.lesson?.video_storage_path || ''} placeholder="courses/course-1/lesson-1.mp4" />
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="ระยะเวลา (นาที)" name="duration_minutes" type="number" defaultValue={lessonModal.lesson?.duration_minutes ?? ''} />
-              <Input label="ลำดับ" name="sort_order" type="number" defaultValue={lessonModal.lesson?.sort_order ?? 0} />
-            </div>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" name="is_preview" defaultChecked={lessonModal.lesson?.is_preview} className="rounded" />
-              <span className="text-sm text-gray-700">ดูตัวอย่างฟรี</span>
-            </label>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" type="button" onClick={() => setLessonModal(null)}>ยกเลิก</Button>
-              <Button type="submit">บันทึก</Button>
-            </div>
-          </form>
+          <LessonForm
+            key={lessonModal.lesson?.id || 'new'}
+            courseId={lessonModal.courseId}
+            lesson={lessonModal.lesson}
+            onSubmit={handleSaveLesson}
+            onCancel={() => setLessonModal(null)}
+          />
         )}
       </Modal>
 
