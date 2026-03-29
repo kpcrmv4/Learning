@@ -232,17 +232,107 @@ CREATE POLICY "Admins can manage all ip logs" ON user_ip_logs FOR ALL USING (is_
 -- =====================================================
 -- Storage Buckets
 -- =====================================================
--- Run these manually in Supabase Dashboard > Storage:
--- 1. Create bucket "videos" (private)
--- 2. Create bucket "payment-slips" (private)
--- 3. Create bucket "thumbnails" (public)
 
--- Storage policies for videos bucket:
--- Allow authenticated users with enrollment to create signed URLs (handled by RLS on lessons table)
+-- 1. Videos bucket (private) - วิดีโอบทเรียน
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'videos', 'videos', false,
+  524288000, -- 500 MB
+  ARRAY['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska']
+) ON CONFLICT (id) DO NOTHING;
 
--- Storage policies for payment-slips bucket:
--- Allow authenticated users to upload to their own folder
--- INSERT: (bucket_id = 'payment-slips' AND auth.uid()::text = (storage.foldername(name))[1])
+-- 2. Thumbnails bucket (public) - รูปปกคอร์ส
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'thumbnails', 'thumbnails', true,
+  10485760, -- 10 MB
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']
+) ON CONFLICT (id) DO NOTHING;
+
+-- 3. Payment slips bucket (private) - สลิปการโอนเงิน
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'payment-slips', 'payment-slips', false,
+  5242880, -- 5 MB
+  ARRAY['image/jpeg', 'image/png', 'image/webp']
+) ON CONFLICT (id) DO NOTHING;
+
+-- =====================================================
+-- Storage RLS Policies
+-- =====================================================
+
+-- Videos: admins can upload/delete, authenticated users can read (via signed URL)
+CREATE POLICY "Admins can upload videos"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (bucket_id = 'videos' AND is_admin());
+
+CREATE POLICY "Admins can update videos"
+  ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (bucket_id = 'videos' AND is_admin());
+
+CREATE POLICY "Admins can delete videos"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'videos' AND is_admin());
+
+CREATE POLICY "Authenticated users can read videos"
+  ON storage.objects FOR SELECT
+  TO authenticated
+  USING (bucket_id = 'videos');
+
+-- Thumbnails: admins can upload/delete, everyone can read (public bucket)
+CREATE POLICY "Admins can upload thumbnails"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (bucket_id = 'thumbnails' AND is_admin());
+
+CREATE POLICY "Admins can update thumbnails"
+  ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (bucket_id = 'thumbnails' AND is_admin());
+
+CREATE POLICY "Admins can delete thumbnails"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'thumbnails' AND is_admin());
+
+CREATE POLICY "Anyone can read thumbnails"
+  ON storage.objects FOR SELECT
+  TO public
+  USING (bucket_id = 'thumbnails');
+
+-- Payment slips: authenticated users can upload to their own folder, admins can read all
+CREATE POLICY "Users can upload own slips"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'payment-slips'
+    AND (storage.foldername(name))[1] = 'slips'
+    AND (storage.foldername(name))[2] = auth.uid()::text
+  );
+
+CREATE POLICY "Users can read own slips"
+  ON storage.objects FOR SELECT
+  TO authenticated
+  USING (
+    bucket_id = 'payment-slips'
+    AND (
+      (storage.foldername(name))[2] = auth.uid()::text
+      OR is_admin()
+    )
+  );
+
+CREATE POLICY "Admins can read all slips"
+  ON storage.objects FOR SELECT
+  TO authenticated
+  USING (bucket_id = 'payment-slips' AND is_admin());
+
+CREATE POLICY "Admins can delete slips"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'payment-slips' AND is_admin());
 
 -- =====================================================
 -- Updated_at trigger
