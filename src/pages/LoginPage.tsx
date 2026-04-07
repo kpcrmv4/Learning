@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
-import { GraduationCap, LogIn } from 'lucide-react'
+import { LogIn } from 'lucide-react'
+import { SITE_LOGO } from '@/config/constants'
 import { toast } from 'sonner'
 
 export function LoginPage() {
@@ -32,7 +33,7 @@ export function LoginPage() {
       <Card className="w-full max-w-md p-8">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-primary-100 mb-4">
-            <GraduationCap className="h-7 w-7 text-primary-600" />
+            <img src={SITE_LOGO} alt="Logo" className="h-10 w-10 rounded" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">เข้าสู่ระบบ</h1>
           <p className="text-sm text-gray-500 mt-1">เข้าสู่ระบบเพื่อดูคอร์สที่ซื้อแล้ว</p>

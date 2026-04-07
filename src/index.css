@@ -20,7 +20,7 @@
   --color-accent-500: oklch(0.55 0.18 160);
   --color-accent-600: oklch(0.48 0.16 160);
 
-  --font-sans: 'Inter', 'Noto Sans Thai', system-ui, sans-serif;
+  --font-sans: 'Noto Sans Thai', system-ui, sans-serif;
 }
 
 @layer base {
