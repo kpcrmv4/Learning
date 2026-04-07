@@ -1,5 +1,6 @@
-export const SITE_NAME = 'CourseHub'
+export const SITE_NAME = 'KP Webapp Studio'
 export const SITE_DESCRIPTION = 'เรียนรู้การสร้าง Google Apps Script และเว็บไซต์ ง่ายๆ ด้วยตัวเอง'
+export const SITE_LOGO = 'https://qshrfxsgcbdmucfytkzt.supabase.co/storage/v1/object/public/thumbnails/logo.png'
 export const MAX_IPS_PER_USER = 3
 export const VIDEO_SIGNED_URL_EXPIRY = 3600 // 1 hour in seconds
 export const PROMPTPAY_ID = import.meta.env.VITE_PROMPTPAY_ID as string || ''

@@ -1,5 +1,5 @@
-import { GraduationCap, Mail, Heart } from 'lucide-react'
-import { SITE_NAME } from '@/config/constants'
+import { Mail, Heart } from 'lucide-react'
+import { SITE_NAME, SITE_LOGO } from '@/config/constants'
 
 export function Footer() {
   return (
@@ -7,7 +7,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-gray-600">
-            <GraduationCap className="h-5 w-5 text-primary-600" />
+            <img src={SITE_LOGO} alt={SITE_NAME} className="h-5 w-5 rounded" />
             <span className="font-semibold">{SITE_NAME}</span>
           </div>
           <div className="flex items-center gap-4 text-sm text-gray-500">

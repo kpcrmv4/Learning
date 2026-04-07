@@ -1,9 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
-import { GraduationCap, Menu, X, User, LogOut, LayoutDashboard, BookOpen } from 'lucide-react'
+import { Menu, X, User, LogOut, LayoutDashboard, BookOpen } from 'lucide-react'
 import { useState } from 'react'
-import { SITE_NAME } from '@/config/constants'
+import { SITE_NAME, SITE_LOGO } from '@/config/constants'
 
 export function Navbar() {
   const { user, profile, isAdmin, signOut } = useAuth()
@@ -20,7 +20,7 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2 text-primary-600 font-bold text-xl">
-            <GraduationCap className="h-7 w-7" />
+            <img src={SITE_LOGO} alt={SITE_NAME} className="h-8 w-8 rounded" />
             {SITE_NAME}
           </Link>
 
